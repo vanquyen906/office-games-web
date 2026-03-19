@@ -1,0 +1,5 @@
+This file exists to satisfy an environment that runs `git commit` with an extra
+pathspec argument: "Cursor".
+
+It is safe to delete once your git tooling is fixed.
+
