@@ -3,6 +3,7 @@ import './App.css'
 import { CaroGame } from './games/CaroGame'
 import { TicTacToeGame } from './games/TicTacToeGame'
 import { ShooterGame } from './games/ShooterGame'
+import { SnakeGame } from './games/SnakeGame'
 
 function App() {
   const games = [
@@ -96,6 +97,16 @@ function App() {
       description:
         'Bắn hạ mục tiêu rơi xuống để ghi điểm. Dùng A/D hoặc ←/→ để di chuyển, Space để bắn.',
     },
+    {
+      id: 'snake',
+      name: 'Rắn săn mồi (Snake)',
+      players: '1',
+      duration: '2–10 phút',
+      category: 'Arcade',
+      tags: ['rắn săn mồi', 'snake', 'phản xạ', 'cổ điển'],
+      description:
+        'Điều khiển rắn ăn mồi để dài ra và ghi điểm. Tránh đâm tường hoặc tự cắn mình.',
+    },
   ] as const
 
   type Category = (typeof games)[number]['category'] | 'Tất cả'
@@ -137,6 +148,14 @@ function App() {
     return (
       <div className="page">
         <ShooterGame onBack={() => setActiveGameId(null)} />
+      </div>
+    )
+  }
+
+  if (activeGameId === 'snake') {
+    return (
+      <div className="page">
+        <SnakeGame onBack={() => setActiveGameId(null)} />
       </div>
     )
   }
