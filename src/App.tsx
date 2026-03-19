@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 import { CaroGame } from './games/CaroGame'
+import { TicTacToeGame } from './games/TicTacToeGame'
 
 function App() {
   const games = [
@@ -74,6 +75,16 @@ function App() {
       description:
         'Chơi 2 người trên lưới ô vuông. Lần lượt đánh X/O; ai tạo được 5 quân liên tiếp (ngang/dọc/chéo) trước sẽ thắng.',
     },
+    {
+      id: 'tic-tac-toe',
+      name: 'Tic Tac Toe (3x3) chơi với máy',
+      players: '1',
+      duration: '2–5 phút',
+      category: 'Strategy',
+      tags: ['tic tac toe', 'AI', 'đối kháng', 'nhanh'],
+      description:
+        'Chơi X/O trên bàn 3x3. Bạn đấu với máy; ai nối 3 quân liên tiếp (ngang/dọc/chéo) trước sẽ thắng.',
+    },
   ] as const
 
   type Category = (typeof games)[number]['category'] | 'Tất cả'
@@ -99,6 +110,14 @@ function App() {
     return (
       <div className="page">
         <CaroGame onBack={() => setActiveGameId(null)} />
+      </div>
+    )
+  }
+
+  if (activeGameId === 'tic-tac-toe') {
+    return (
+      <div className="page">
+        <TicTacToeGame onBack={() => setActiveGameId(null)} />
       </div>
     )
   }
