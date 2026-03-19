@@ -1,0 +1,332 @@
+.page {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  padding: 28px 20px 18px;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(1200px 500px at 10% 0%, rgba(170, 59, 255, 0.12), transparent 55%),
+    radial-gradient(900px 450px at 90% 10%, rgba(192, 132, 252, 0.12), transparent 60%);
+}
+
+.brand {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+}
+
+.brandText {
+  flex: 1 1 520px;
+}
+
+.brandText h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -0.5px;
+}
+
+.brandText p {
+  margin-top: 6px;
+  color: var(--text);
+}
+
+.controls {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+input,
+select {
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+  color: var(--text-h);
+  outline: none;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.content {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 18px 20px 32px;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.count {
+  color: var(--text);
+}
+
+.btn {
+  font: inherit;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.btn:hover {
+  box-shadow: var(--shadow);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.card {
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+}
+
+.card.isClickable {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.card.isClickable:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--border));
+}
+
+.card.isClickable:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--accent) 50%, transparent);
+  outline-offset: 2px;
+}
+
+.caroPage {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 18px 20px 28px;
+  box-sizing: border-box;
+}
+
+.caroHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 18px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+}
+
+.caroTitle h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.4px;
+}
+
+.caroTitle p {
+  margin-top: 6px;
+  color: var(--text);
+}
+
+.caroActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.caroStatus {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.caroBoard {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+  overflow: auto;
+}
+
+.caroCell {
+  aspect-ratio: 1 / 1;
+  min-width: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 92%, var(--code-bg));
+  color: var(--text-h);
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.caroCell:hover {
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--border));
+}
+
+.caroCell.isLast {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 20%, transparent);
+}
+
+.caroCell:disabled {
+  cursor: not-allowed;
+}
+
+@media (max-width: 620px) {
+  .caroCell {
+    min-width: 28px;
+    border-radius: 8px;
+  }
+}
+
+.cardTop {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+}
+
+.cardDesc {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.pill {
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.facts {
+  margin: 12px 0 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.fact dt {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.fact dd {
+  margin: 2px 0 0;
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tag {
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+  color: var(--text-h);
+}
+
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 14px 20px;
+  color: var(--text);
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
