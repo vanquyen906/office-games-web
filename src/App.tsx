@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import { CaroGame } from './games/CaroGame'
 import { TicTacToeGame } from './games/TicTacToeGame'
+import { ShooterGame } from './games/ShooterGame'
 
 function App() {
   const games = [
@@ -85,6 +86,16 @@ function App() {
       description:
         'Chơi X/O trên bàn 3x3. Bạn đấu với máy; ai nối 3 quân liên tiếp (ngang/dọc/chéo) trước sẽ thắng.',
     },
+    {
+      id: 'shooter',
+      name: 'Bắn súng (Shooting gallery)',
+      players: '1',
+      duration: '2–8 phút',
+      category: 'Arcade',
+      tags: ['bắn súng', 'phản xạ', 'arcade', 'nhanh'],
+      description:
+        'Bắn hạ mục tiêu rơi xuống để ghi điểm. Dùng A/D hoặc ←/→ để di chuyển, Space để bắn.',
+    },
   ] as const
 
   type Category = (typeof games)[number]['category'] | 'Tất cả'
@@ -118,6 +129,14 @@ function App() {
     return (
       <div className="page">
         <TicTacToeGame onBack={() => setActiveGameId(null)} />
+      </div>
+    )
+  }
+
+  if (activeGameId === 'shooter') {
+    return (
+      <div className="page">
+        <ShooterGame onBack={() => setActiveGameId(null)} />
       </div>
     )
   }

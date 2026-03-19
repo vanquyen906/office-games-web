@@ -353,6 +353,84 @@ select:focus {
   opacity: 0.78;
 }
 
+.shooterPage {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 18px 20px 28px;
+  box-sizing: border-box;
+}
+
+.shooterHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 18px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+}
+
+.shooterTitle h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.4px;
+}
+
+.shooterTitle p {
+  margin-top: 6px;
+  color: var(--text);
+}
+
+.shooterActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.shooterField {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+
+.shooterLabel {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.shooterStatus {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.shooterWrap {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+  padding: 14px;
+  width: 720px;
+  max-width: 100%;
+}
+
+.shooterCanvas {
+  display: block;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: radial-gradient(800px 420px at 30% 0%, rgba(192, 132, 252, 0.14), transparent 55%),
+    radial-gradient(700px 380px at 80% 20%, rgba(170, 59, 255, 0.14), transparent 55%),
+    color-mix(in oklab, var(--bg) 92%, var(--code-bg));
+}
+
 .cardTop {
   display: flex;
   gap: 12px;
