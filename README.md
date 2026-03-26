@@ -71,3 +71,45 @@ export default defineConfig([
   },
 ])
 ```
+
+## Tank Battle Online
+
+This project now includes a multiplayer `Tank Battle Online` game:
+
+- Join by `room id` + `player name` (no account/login required)
+- Max `6 players` per room
+- Spawn gates are assigned per player
+- If hit by a bullet, a tank respawns at its original gate
+- Kills/deaths ranking is kept in memory for the room session
+- Room is automatically deleted when all players leave
+
+### Local run (frontend + game server)
+
+Terminal 1:
+
+```bash
+npm run dev
+```
+
+Terminal 2:
+
+```bash
+npm run dev:server
+```
+
+Frontend WebSocket URL can be configured with:
+
+```bash
+VITE_TANK_WS_URL=ws://localhost:8787/ws
+```
+
+### Deploy free public server
+
+You can deploy `server/index.js` to a free host like [Render](https://render.com/):
+
+1. Create a new Web Service from this repo
+2. Build command: `npm install`
+3. Start command: `npm run start:server`
+4. Runtime: Node
+5. Use the generated public URL in frontend env:
+   `VITE_TANK_WS_URL=wss://your-service.onrender.com/ws`

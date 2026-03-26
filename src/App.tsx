@@ -4,6 +4,7 @@ import { CaroGame } from './games/CaroGame'
 import { TicTacToeGame } from './games/TicTacToeGame'
 import { ShooterGame } from './games/ShooterGame'
 import { SnakeGame } from './games/SnakeGame'
+import { TankBattleGame } from './games/TankBattleGame'
 
 function App() {
   const games = [
@@ -107,6 +108,16 @@ function App() {
       description:
         'Điều khiển rắn ăn mồi để dài ra và ghi điểm. Tránh đâm tường hoặc tự cắn mình.',
     },
+    {
+      id: 'tank-online',
+      name: 'Bắn xe tăng cổ điển (Online)',
+      players: '2–6',
+      duration: '5–30 phút',
+      category: 'Arcade',
+      tags: ['xe tăng', 'multiplayer', 'online', 'phòng'],
+      description:
+        'Vào phòng bằng mã + tên để chơi cùng bạn bè. Xe tăng bị hạ sẽ hồi sinh ở cổng ban đầu, có bảng xếp hạng mạng hạ.',
+    },
   ] as const
 
   type Category = (typeof games)[number]['category'] | 'Tất cả'
@@ -156,6 +167,14 @@ function App() {
     return (
       <div className="page">
         <SnakeGame onBack={() => setActiveGameId(null)} />
+      </div>
+    )
+  }
+
+  if (activeGameId === 'tank-online') {
+    return (
+      <div className="page">
+        <TankBattleGame onBack={() => setActiveGameId(null)} />
       </div>
     )
   }

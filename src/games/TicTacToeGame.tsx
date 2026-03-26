@@ -19,7 +19,7 @@ function getWinner(board: Cell[]) {
     const v = board[a]
     if (v && v === board[b] && v === board[c]) return v
   }
-  return null
+  return null;
 }
 
 function getEmptyIndexes(board: Cell[]) {

@@ -509,6 +509,148 @@ select:focus {
     color-mix(in oklab, var(--bg) 92%, var(--code-bg));
 }
 
+.tankPage {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 18px 20px 28px;
+  box-sizing: border-box;
+}
+
+.tankHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 18px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+}
+
+.tankTitle h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.4px;
+}
+
+.tankTitle p {
+  margin-top: 6px;
+  color: var(--text);
+}
+
+.tankActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.tankField {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+
+.tankLabel {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.tankStatus {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.tankError {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #f59e0b77;
+  background: #f59e0b22;
+  color: var(--text-h);
+}
+
+.tankMain {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 12px;
+}
+
+.tankArenaWrap {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+}
+
+.tankCanvas {
+  display: block;
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.tankSidebar {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.tankPanel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+}
+
+.tankPanel h3 {
+  margin: 0 0 8px;
+  color: var(--text-h);
+  font-size: 15px;
+}
+
+.tankRanks,
+.tankLogs {
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.tankRank {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 56px 56px;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--social-bg);
+}
+
+.tankRank.isMe {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.tankLogs p {
+  margin: 0;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--social-bg);
+}
+
 .cardTop {
   display: flex;
   gap: 12px;
@@ -592,6 +734,12 @@ select:focus {
 
 @media (max-width: 620px) {
   .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .tankMain {
     grid-template-columns: 1fr;
   }
 }
