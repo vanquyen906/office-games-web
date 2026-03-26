@@ -27,7 +27,8 @@ type RoomState = {
 
 function getDefaultWsUrl() {
   if (import.meta.env.VITE_TANK_WS_URL) return String(import.meta.env.VITE_TANK_WS_URL)
-  if (window.location.hostname === 'localhost') return 'ws://localhost:8787/ws'
+  const host = window.location.hostname
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return 'ws://localhost:8787/ws'
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${window.location.hostname}:8787/ws`
 }
