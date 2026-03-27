@@ -12,10 +12,15 @@ type Player = {
   kills: number
   deaths: number
   gateIndex: number
+  renderType: 'tank' | 'woman' | 'man' | 'plane'
+  dualBarrel: boolean
+  isAlive: boolean
+  respawnAt: number
 }
 
-type Bullet = { id: string; x: number; y: number; ownerId: string }
+type Bullet = { id: string; x: number; y: number; ownerId: string; color: string }
 type Gate = { x: number; y: number; dir: number }
+type Obstacle = { id: string; x: number; y: number; r: number; hp: number; maxHp: number }
 
 type RoomState = {
   width: number
@@ -23,6 +28,7 @@ type RoomState = {
   players: Player[]
   bullets: Bullet[]
   gates: Gate[]
+  obstacles: Obstacle[]
 }
 
 function getDefaultWsUrl() {
@@ -58,6 +64,7 @@ export function TankBattleGame(props: { onBack: () => void }) {
     players: [],
     bullets: [],
     gates: [],
+    obstacles: [],
   })
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -167,6 +174,7 @@ export function TankBattleGame(props: { onBack: () => void }) {
           players: msg.players,
           bullets: msg.bullets,
           gates: msg.gates,
+          obstacles: msg.obstacles ?? [],
         })
       }
     }
@@ -351,9 +359,28 @@ export function TankBattleGame(props: { onBack: () => void }) {
         ctx.fillText(String(i + 1), gx, gy + 4)
       }
 
+      // obstacles
+      for (const o of roomState.obstacles) {
+        const ox = o.x * sx
+        const oy = o.y * sy
+        const rr = o.r * sx
+        ctx.fillStyle = 'rgba(73, 73, 73, 0.65)'
+        ctx.strokeStyle = 'rgba(30, 30, 30, 0.85)'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(ox, oy, rr, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+        const hpPct = Math.max(0, o.hp / o.maxHp)
+        ctx.fillStyle = 'rgba(0,0,0,0.25)'
+        ctx.fillRect(ox - rr, oy + rr + 6, rr * 2, 5)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+        ctx.fillRect(ox - rr, oy + rr + 6, rr * 2 * hpPct, 5)
+      }
+
       // bullets
       for (const b of roomState.bullets) {
-        ctx.fillStyle = '#5b4632'
+        ctx.fillStyle = b.color || '#5b4632'
         ctx.beginPath()
         ctx.arc(b.x * sx, b.y * sy, 4, 0, Math.PI * 2)
         ctx.fill()
@@ -364,22 +391,77 @@ export function TankBattleGame(props: { onBack: () => void }) {
         const x = p.x * sx
         const y = p.y * sy
         const r = 18
+
+        if (!p.isAlive) {
+          // soot explosion remains black during respawn delay
+          ctx.fillStyle = 'rgba(0,0,0,0.65)'
+          ctx.beginPath()
+          ctx.arc(x, y, 24, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = 'rgba(0,0,0,0.35)'
+          ctx.beginPath()
+          ctx.arc(x - 18, y + 8, 12, 0, Math.PI * 2)
+          ctx.arc(x + 14, y + 10, 10, 0, Math.PI * 2)
+          ctx.fill()
+
+          const remain = Math.max(0, Math.ceil((p.respawnAt - Date.now()) / 1000))
+          ctx.fillStyle = '#1f160f'
+          ctx.font = '700 12px ui-monospace, monospace'
+          ctx.textAlign = 'center'
+          ctx.fillText(`Hồi sinh: ${remain}s`, x, y - 28)
+          ctx.fillStyle = '#2e2318'
+          ctx.fillText(`${p.name}`, x, y - 42)
+          continue
+        }
+
         ctx.save()
         ctx.translate(x, y)
         ctx.rotate(p.angle)
-        ctx.fillStyle = p.color
         ctx.strokeStyle = '#2e2318'
         ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.roundRect(-r, -r, r * 2, r * 2, 6)
-        ctx.fill()
-        ctx.stroke()
 
-        ctx.fillStyle = '#2e2318'
-        ctx.beginPath()
-        ctx.arc(0, 0, 7, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.fillRect(0, -3, 24, 6)
+        if (p.renderType === 'plane') {
+          ctx.fillStyle = p.color
+          ctx.beginPath()
+          ctx.moveTo(24, 0)
+          ctx.lineTo(-18, -12)
+          ctx.lineTo(-10, 0)
+          ctx.lineTo(-18, 12)
+          ctx.closePath()
+          ctx.fill()
+          ctx.stroke()
+          ctx.fillRect(-4, -18, 8, 36)
+        } else if (p.renderType === 'woman' || p.renderType === 'man') {
+          ctx.fillStyle = p.color
+          ctx.beginPath()
+          ctx.roundRect(-10, -18, 20, 30, 8)
+          ctx.fill()
+          ctx.stroke()
+          ctx.fillStyle = '#f8e0c0'
+          ctx.beginPath()
+          ctx.arc(0, -24, 8, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.strokeStyle = '#2e2318'
+          ctx.stroke()
+          ctx.fillStyle = '#2e2318'
+          ctx.fillRect(6, -3, 18, 6)
+        } else {
+          ctx.fillStyle = p.color
+          ctx.beginPath()
+          ctx.roundRect(-r, -r, r * 2, r * 2, 6)
+          ctx.fill()
+          ctx.stroke()
+          ctx.fillStyle = '#2e2318'
+          ctx.beginPath()
+          ctx.arc(0, 0, 7, 0, Math.PI * 2)
+          ctx.fill()
+          if (p.dualBarrel) {
+            ctx.fillRect(0, -8, 24, 5)
+            ctx.fillRect(0, 3, 24, 5)
+          } else {
+            ctx.fillRect(0, -3, 24, 6)
+          }
+        }
         ctx.restore()
 
         ctx.fillStyle = '#2e2318'

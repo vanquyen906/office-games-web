@@ -8,6 +8,7 @@ const WORLD_W = 1280
 const WORLD_H = 820
 const TICK_MS = 1000 / 30
 const SNAPSHOT_MS = 100
+const RESPAWN_MS = 3000
 
 const GATE_LAYOUT = [
   { x: 100, y: 100, dir: 0 },
@@ -42,6 +43,14 @@ function distSq(ax, ay, bx, by) {
 function getRoom(roomId) {
   let room = rooms.get(roomId)
   if (room) return room
+  const obstacles = [
+    { id: 'r1', x: 320, y: 220, r: 34, hp: 5, maxHp: 5 },
+    { id: 'r2', x: 640, y: 210, r: 34, hp: 5, maxHp: 5 },
+    { id: 'r3', x: 960, y: 220, r: 34, hp: 5, maxHp: 5 },
+    { id: 'r4', x: 320, y: 600, r: 34, hp: 5, maxHp: 5 },
+    { id: 'r5', x: 640, y: 610, r: 34, hp: 5, maxHp: 5 },
+    { id: 'r6', x: 960, y: 600, r: 34, hp: 5, maxHp: 5 },
+  ]
   room = {
     id: roomId,
     width: WORLD_W,
@@ -49,6 +58,7 @@ function getRoom(roomId) {
     createdAt: now(),
     players: new Map(),
     bullets: [],
+    obstacles,
     lastSnapshotAt: 0,
   }
   rooms.set(roomId, room)
@@ -76,13 +86,24 @@ function assignGateIndex(room) {
   return -1
 }
 
+function parseNameTraits(name) {
+  let renderType = 'tank'
+  let dualBarrel = false
+  if (name.startsWith('++')) dualBarrel = true
+  if (name.startsWith('@>')) renderType = 'woman'
+  else if (name.startsWith('@<')) renderType = 'man'
+  else if (name.startsWith('#')) renderType = 'plane'
+  return { renderType, dualBarrel }
+}
+
 function buildSnapshot(room) {
+  const activeGateCount = Math.min(MAX_PER_ROOM, Math.max(1, room.players.size))
   return {
     type: 'room_state',
     roomId: room.id,
     width: room.width,
     height: room.height,
-    gates: GATE_LAYOUT,
+    gates: GATE_LAYOUT.slice(0, activeGateCount),
     players: [...room.players.values()].map((p) => ({
       id: p.id,
       name: p.name,
@@ -93,12 +114,25 @@ function buildSnapshot(room) {
       kills: p.kills,
       deaths: p.deaths,
       gateIndex: p.gateIndex,
+      renderType: p.renderType,
+      dualBarrel: p.dualBarrel,
+      isAlive: p.isAlive,
+      respawnAt: p.respawnAt,
     })),
     bullets: room.bullets.map((b) => ({
       id: b.id,
       x: b.x,
       y: b.y,
       ownerId: b.ownerId,
+      color: b.color,
+    })),
+    obstacles: room.obstacles.map((o) => ({
+      id: o.id,
+      x: o.x,
+      y: o.y,
+      r: o.r,
+      hp: o.hp,
+      maxHp: o.maxHp,
     })),
     at: now(),
   }
@@ -126,8 +160,21 @@ function simulateRoom(room, dtSec) {
   const bulletSpeed = 500
   const bulletRadius = 4
   const fireCooldownMs = 300
+  const tNow = now()
 
   for (const p of room.players.values()) {
+    if (!p.isAlive) {
+      if (tNow >= p.respawnAt) {
+        const gate = GATE_LAYOUT[p.gateIndex]
+        p.isAlive = true
+        p.x = gate.x
+        p.y = gate.y
+        p.angle = gate.dir
+      } else {
+        continue
+      }
+    }
+
     p.fireCooldown = Math.max(0, p.fireCooldown - dtSec * 1000)
 
     let dx = 0
@@ -140,8 +187,13 @@ function simulateRoom(room, dtSec) {
     const len = Math.hypot(dx, dy) || 1
     const vx = (dx / len) * speed
     const vy = (dy / len) * speed
-    p.x = clamp(p.x + vx * dtSec, tankRadius, room.width - tankRadius)
-    p.y = clamp(p.y + vy * dtSec, tankRadius, room.height - tankRadius)
+    const nx = clamp(p.x + vx * dtSec, tankRadius, room.width - tankRadius)
+    const ny = clamp(p.y + vy * dtSec, tankRadius, room.height - tankRadius)
+    const blocked = room.obstacles.some((o) => distSq(nx, ny, o.x, o.y) < (tankRadius + o.r) ** 2)
+    if (!blocked) {
+      p.x = nx
+      p.y = ny
+    }
 
     if (Number.isFinite(p.input.aimX) && Number.isFinite(p.input.aimY)) {
       p.angle = Math.atan2(p.input.aimY - p.y, p.input.aimX - p.x)
@@ -158,18 +210,26 @@ function simulateRoom(room, dtSec) {
   )
 
   for (const bullet of room.bullets) {
+    // bullet vs obstacle
+    for (const rock of room.obstacles) {
+      if (distSq(bullet.x, bullet.y, rock.x, rock.y) > (bulletRadius + rock.r) ** 2) continue
+      rock.hp -= 1
+      bullet.lifeMs = -1
+      break
+    }
+    if (bullet.lifeMs <= 0) continue
+
+    // bullet vs players
     for (const victim of room.players.values()) {
+      if (!victim.isAlive) continue
       if (victim.id === bullet.ownerId) continue
       if (distSq(bullet.x, bullet.y, victim.x, victim.y) > (bulletRadius + tankRadius) ** 2) continue
 
       const killer = room.players.get(bullet.ownerId)
       if (killer) killer.kills += 1
       victim.deaths += 1
-
-      const gate = GATE_LAYOUT[victim.gateIndex]
-      victim.x = gate.x
-      victim.y = gate.y
-      victim.angle = gate.dir
+      victim.isAlive = false
+      victim.respawnAt = tNow + RESPAWN_MS
       victim.fireCooldown = fireCooldownMs
 
       bullet.lifeMs = -1
@@ -183,9 +243,9 @@ function simulateRoom(room, dtSec) {
       break
     }
   }
+  room.obstacles = room.obstacles.filter((o) => o.hp > 0)
   room.bullets = room.bullets.filter((b) => b.lifeMs > 0)
 
-  const tNow = now()
   if (tNow - room.lastSnapshotAt >= SNAPSHOT_MS) {
     room.lastSnapshotAt = tNow
     broadcast(room, buildSnapshot(room))
@@ -244,6 +304,7 @@ wss.on('connection', (ws) => {
 
       playerId = `p${nextPlayerId++}`
       const gate = GATE_LAYOUT[gateIndex]
+      const traits = parseNameTraits(name)
       room.players.set(playerId, {
         id: playerId,
         ws,
@@ -255,6 +316,10 @@ wss.on('connection', (ws) => {
         gateIndex,
         kills: 0,
         deaths: 0,
+        isAlive: true,
+        respawnAt: 0,
+        renderType: traits.renderType,
+        dualBarrel: traits.dualBarrel,
         fireCooldown: 0,
         input: { up: false, down: false, left: false, right: false, aimX: gate.x, aimY: gate.y },
       })
@@ -285,20 +350,32 @@ wss.on('connection', (ws) => {
     }
 
     if (msg.type === 'shoot') {
+      if (!me.isAlive) return
       if (me.fireCooldown > 0) return
       const aimX = Number.isFinite(msg.aimX) ? Number(msg.aimX) : me.input.aimX
       const aimY = Number.isFinite(msg.aimY) ? Number(msg.aimY) : me.input.aimY
       const angle = Math.atan2(aimY - me.y, aimX - me.x)
       me.angle = angle
       me.fireCooldown = 300
-      room.bullets.push({
-        id: `b${nextBulletId++}`,
-        ownerId: me.id,
-        x: me.x + Math.cos(angle) * 22,
-        y: me.y + Math.sin(angle) * 22,
-        angle,
-        lifeMs: 1600,
-      })
+
+      const spawnBullet = (angOffset = 0) => {
+        const a = angle + angOffset
+        room.bullets.push({
+          id: `b${nextBulletId++}`,
+          ownerId: me.id,
+          color: me.color,
+          x: me.x + Math.cos(a) * 22,
+          y: me.y + Math.sin(a) * 22,
+          angle: a,
+          lifeMs: 1600,
+        })
+      }
+      if (me.dualBarrel) {
+        spawnBullet(-0.08)
+        spawnBullet(0.08)
+      } else {
+        spawnBullet(0)
+      }
     }
   })
 
