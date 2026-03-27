@@ -6,9 +6,10 @@ const PORT = Number(process.env.PORT || 8787)
 const MAX_PER_ROOM = 6
 const WORLD_W = 1280
 const WORLD_H = 820
-const TICK_MS = 1000 / 30
-const SNAPSHOT_MS = 100
+const TICK_MS = 1000 / 60
+const SNAPSHOT_MS = 1000 / 20
 const RESPAWN_MS = 3000
+const GATE_SAFE_RADIUS = 56
 
 const GATE_LAYOUT = [
   { x: 100, y: 100, dir: 0 },
@@ -97,13 +98,19 @@ function parseNameTraits(name) {
 }
 
 function buildSnapshot(room) {
-  const activeGateCount = Math.min(MAX_PER_ROOM, Math.max(1, room.players.size))
+  const activeGateSet = new Set(
+    [...room.players.values()]
+      .filter((p) => p.isAlive && p.gateVisible)
+      .map((p) => p.gateIndex),
+  )
   return {
     type: 'room_state',
     roomId: room.id,
     width: room.width,
     height: room.height,
-    gates: GATE_LAYOUT.slice(0, activeGateCount),
+    gates: GATE_LAYOUT
+      .map((g, i) => ({ ...g, gateIndex: i }))
+      .filter((g) => activeGateSet.has(g.gateIndex)),
     players: [...room.players.values()].map((p) => ({
       id: p.id,
       name: p.name,
@@ -118,6 +125,7 @@ function buildSnapshot(room) {
       dualBarrel: p.dualBarrel,
       isAlive: p.isAlive,
       respawnAt: p.respawnAt,
+      isInvulnerable: p.isInvulnerable,
     })),
     bullets: room.bullets.map((b) => ({
       id: b.id,
@@ -170,6 +178,8 @@ function simulateRoom(room, dtSec) {
         p.x = gate.x
         p.y = gate.y
         p.angle = gate.dir
+        p.isInvulnerable = true
+        p.gateVisible = true
       } else {
         continue
       }
@@ -198,6 +208,14 @@ function simulateRoom(room, dtSec) {
     if (Number.isFinite(p.input.aimX) && Number.isFinite(p.input.aimY)) {
       p.angle = Math.atan2(p.input.aimY - p.y, p.input.aimX - p.x)
     }
+
+    if (p.isInvulnerable) {
+      const gate = GATE_LAYOUT[p.gateIndex]
+      if (distSq(p.x, p.y, gate.x, gate.y) > GATE_SAFE_RADIUS * GATE_SAFE_RADIUS) {
+        p.isInvulnerable = false
+        p.gateVisible = false
+      }
+    }
   }
 
   for (const b of room.bullets) {
@@ -222,6 +240,7 @@ function simulateRoom(room, dtSec) {
     // bullet vs players
     for (const victim of room.players.values()) {
       if (!victim.isAlive) continue
+      if (victim.isInvulnerable) continue
       if (victim.id === bullet.ownerId) continue
       if (distSq(bullet.x, bullet.y, victim.x, victim.y) > (bulletRadius + tankRadius) ** 2) continue
 
@@ -230,6 +249,8 @@ function simulateRoom(room, dtSec) {
       victim.deaths += 1
       victim.isAlive = false
       victim.respawnAt = tNow + RESPAWN_MS
+      victim.isInvulnerable = false
+      victim.gateVisible = false
       victim.fireCooldown = fireCooldownMs
 
       bullet.lifeMs = -1
@@ -318,6 +339,8 @@ wss.on('connection', (ws) => {
         deaths: 0,
         isAlive: true,
         respawnAt: 0,
+        isInvulnerable: true,
+        gateVisible: true,
         renderType: traits.renderType,
         dualBarrel: traits.dualBarrel,
         fireCooldown: 0,

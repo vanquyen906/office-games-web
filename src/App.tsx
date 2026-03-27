@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { CaroGame } from './games/CaroGame'
 import { TicTacToeGame } from './games/TicTacToeGame'
@@ -124,7 +125,20 @@ function App() {
 
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<Category>('Tất cả')
-  const [activeGameId, setActiveGameId] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const gameRoutes: Partial<Record<(typeof games)[number]['id'], string>> = {
+    caro: '/caro',
+    'tic-tac-toe': '/tic-tac-toe',
+    shooter: '/ban-sung',
+    snake: '/ran-san-moi',
+    'tank-online': '/ban-xe-tang',
+  }
+  const routeToGame = Object.fromEntries(
+    Object.entries(gameRoutes).map(([id, route]) => [route, id]),
+  ) as Record<string, string>
+  const activeGameId = routeToGame[location.pathname] ?? null
 
   const categories = ['Tất cả', ...new Set(games.map((g) => g.category))] as const
 
@@ -142,7 +156,7 @@ function App() {
   if (activeGameId === 'caro') {
     return (
       <div className="page">
-        <CaroGame onBack={() => setActiveGameId(null)} />
+        <CaroGame onBack={() => navigate('/')} />
       </div>
     )
   }
@@ -150,7 +164,7 @@ function App() {
   if (activeGameId === 'tic-tac-toe') {
     return (
       <div className="page">
-        <TicTacToeGame onBack={() => setActiveGameId(null)} />
+        <TicTacToeGame onBack={() => navigate('/')} />
       </div>
     )
   }
@@ -158,7 +172,7 @@ function App() {
   if (activeGameId === 'shooter') {
     return (
       <div className="page">
-        <ShooterGame onBack={() => setActiveGameId(null)} />
+        <ShooterGame onBack={() => navigate('/')} />
       </div>
     )
   }
@@ -166,7 +180,7 @@ function App() {
   if (activeGameId === 'snake') {
     return (
       <div className="page">
-        <SnakeGame onBack={() => setActiveGameId(null)} />
+        <SnakeGame onBack={() => navigate('/')} />
       </div>
     )
   }
@@ -174,7 +188,7 @@ function App() {
   if (activeGameId === 'tank-online') {
     return (
       <div className="page">
-        <TankBattleGame onBack={() => setActiveGameId(null)} />
+        <TankBattleGame onBack={() => navigate('/')} />
       </div>
     )
   }
@@ -244,9 +258,15 @@ function App() {
               tabIndex={0}
               role="button"
               aria-label={`Mở trò chơi: ${g.name}`}
-              onClick={() => setActiveGameId(g.id)}
+              onClick={() => {
+                const to = gameRoutes[g.id]
+                if (to) navigate(to)
+              }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') setActiveGameId(g.id)
+                if (e.key === 'Enter' || e.key === ' ') {
+                  const to = gameRoutes[g.id]
+                  if (to) navigate(to)
+                }
               }}
             >
               <div className="cardTop">

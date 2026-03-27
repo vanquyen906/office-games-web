@@ -16,6 +16,7 @@ type Player = {
   dualBarrel: boolean
   isAlive: boolean
   respawnAt: number
+  isInvulnerable: boolean
 }
 
 type Bullet = { id: string; x: number; y: number; ownerId: string; color: string }
@@ -71,6 +72,7 @@ export function TankBattleGame(props: { onBack: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const frameRef = useRef<number | null>(null)
+  const smoothPlayersRef = useRef<Record<string, { x: number; y: number; angle: number }>>({})
   const keysRef = useRef({ up: false, down: false, left: false, right: false })
   const aimRef = useRef({ x: roomState.width / 2, y: roomState.height / 2 })
   const lastInputSentAtRef = useRef(0)
@@ -386,10 +388,30 @@ export function TankBattleGame(props: { onBack: () => void }) {
         ctx.fill()
       }
 
-      // tanks
+      // tanks (smoothed to reduce network jitter)
+      const activeIds = new Set(roomState.players.map((p) => p.id))
+      for (const id of Object.keys(smoothPlayersRef.current)) {
+        if (!activeIds.has(id)) delete smoothPlayersRef.current[id]
+      }
+
       for (const p of roomState.players) {
-        const x = p.x * sx
-        const y = p.y * sy
+        const sm =
+          smoothPlayersRef.current[p.id] ?? (smoothPlayersRef.current[p.id] = { x: p.x, y: p.y, angle: p.angle })
+        if (!p.isAlive) {
+          sm.x = p.x
+          sm.y = p.y
+          sm.angle = p.angle
+        } else {
+          sm.x += (p.x - sm.x) * 0.24
+          sm.y += (p.y - sm.y) * 0.24
+          let da = p.angle - sm.angle
+          while (da > Math.PI) da -= Math.PI * 2
+          while (da < -Math.PI) da += Math.PI * 2
+          sm.angle += da * 0.24
+        }
+
+        const x = sm.x * sx
+        const y = sm.y * sy
         const r = 18
 
         if (!p.isAlive) {
@@ -416,7 +438,7 @@ export function TankBattleGame(props: { onBack: () => void }) {
 
         ctx.save()
         ctx.translate(x, y)
-        ctx.rotate(p.angle)
+        ctx.rotate(sm.angle)
         ctx.strokeStyle = '#2e2318'
         ctx.lineWidth = 2
 
@@ -463,6 +485,14 @@ export function TankBattleGame(props: { onBack: () => void }) {
           }
         }
         ctx.restore()
+
+        if (p.isInvulnerable) {
+          ctx.strokeStyle = 'rgba(59,130,246,0.8)'
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(x, y, 26, 0, Math.PI * 2)
+          ctx.stroke()
+        }
 
         ctx.fillStyle = '#2e2318'
         ctx.font = '600 12px ui-monospace, monospace'
