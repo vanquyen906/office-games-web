@@ -35,9 +35,9 @@ type RoomState = {
 function getDefaultWsUrl() {
   if (import.meta.env.VITE_TANK_WS_URL) return String(import.meta.env.VITE_TANK_WS_URL)
   const host = window.location.hostname
-  if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return 'ws://localhost:8787/ws'
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return 'ws://127.0.0.1:8790/ws'
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.hostname}:8787/ws`
+  return `${protocol}//${window.location.hostname}:8790/ws`
 }
 
 function toWorld(
@@ -602,4 +602,3 @@ export function TankBattleGame(props: { onBack: () => void }) {
     </div>
   )
 }
-

@@ -2,7 +2,7 @@ import express from 'express'
 import { createServer } from 'http'
 import { WebSocketServer } from 'ws'
 
-const PORT = Number(process.env.PORT || 8787)
+const PORT = Number(process.env.PORT || 8790)
 const MAX_PER_ROOM = 6
 const WORLD_W = 1280
 const WORLD_H = 820
@@ -10,6 +10,7 @@ const TICK_MS = 1000 / 60
 const SNAPSHOT_MS = 1000 / 20
 const RESPAWN_MS = 3000
 const GATE_SAFE_RADIUS = 56
+const CARO_SIZE = 15
 
 const GATE_LAYOUT = [
   { x: 100, y: 100, dir: 0 },
@@ -24,8 +25,11 @@ const TANK_COLORS = ['#ef4444', '#3b82f6', '#f59e0b', '#22c55e', '#a855f7', '#14
 
 let nextPlayerId = 1
 let nextBulletId = 1
+let nextCaroClientId = 1
 
 const rooms = new Map()
+const caroRooms = new Map()
+const caroLobbyClients = new Set()
 
 function now() {
   return Date.now()
@@ -95,6 +99,136 @@ function parseNameTraits(name) {
   else if (name.startsWith('@<')) renderType = 'man'
   else if (name.startsWith('#')) renderType = 'plane'
   return { renderType, dualBarrel }
+}
+
+function createCaroBoard() {
+  return Array.from({ length: CARO_SIZE }, () => Array.from({ length: CARO_SIZE }, () => null))
+}
+
+function countCaroInDirection(board, row, col, dRow, dCol, player) {
+  let r = row + dRow
+  let c = col + dCol
+  let count = 0
+  while (r >= 0 && r < board.length && c >= 0 && c < board[0].length) {
+    if (board[r][c] !== player) break
+    count += 1
+    r += dRow
+    c += dCol
+  }
+  return count
+}
+
+function isCaroWinFromMove(board, row, col, player, needed = 5) {
+  const directions = [
+    [0, 1],
+    [1, 0],
+    [1, 1],
+    [1, -1],
+  ]
+
+  for (const [dr, dc] of directions) {
+    const total =
+      1 + countCaroInDirection(board, row, col, dr, dc, player) + countCaroInDirection(board, row, col, -dr, -dc, player)
+    if (total >= needed) return true
+  }
+  return false
+}
+
+function buildCaroRoomsPayload() {
+  return {
+    type: 'rooms',
+    rooms: [...caroRooms.values()].map((room) => {
+      const host = room.players.get(room.hostId)
+      return {
+        id: room.id,
+        players: room.players.size,
+        queue: room.queue.length,
+        hostName: host ? host.name : null,
+        status: room.started ? 'playing' : room.players.size < 2 ? 'waiting' : 'ready',
+      }
+    }),
+  }
+}
+
+function broadcastCaroRooms() {
+  const payload = JSON.stringify(buildCaroRoomsPayload())
+  for (const ws of caroLobbyClients.values()) {
+    if (ws.readyState === ws.OPEN) ws.send(payload)
+  }
+}
+
+function buildCaroRoomState(room) {
+  return {
+    type: 'room_state',
+    roomId: room.id,
+    board: room.board,
+    current: room.current,
+    winner: room.winner,
+    started: room.started,
+    hostId: room.hostId,
+    lastMove: room.lastMove,
+    players: [...room.players.values()].map((p) => ({
+      id: p.id,
+      name: p.name,
+      ready: p.ready,
+      symbol: p.symbol,
+    })),
+    queue: room.queue.map((q) => ({ id: q.id, name: q.name })),
+  }
+}
+
+function sendCaro(ws, payload) {
+  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(payload))
+}
+
+function broadcastCaroRoom(room, payload) {
+  const body = JSON.stringify(payload)
+  for (const p of room.players.values()) {
+    if (p.ws.readyState === p.ws.OPEN) p.ws.send(body)
+  }
+  for (const q of room.queue) {
+    if (q.ws.readyState === q.ws.OPEN) q.ws.send(body)
+  }
+}
+
+function resetCaroRoom(room) {
+  if (room.resetTimer) {
+    clearTimeout(room.resetTimer)
+    room.resetTimer = null
+  }
+  room.board = createCaroBoard()
+  room.current = 'X'
+  room.winner = null
+  room.started = false
+  room.lastMove = null
+  for (const p of room.players.values()) {
+    p.ready = false
+    p.symbol = null
+  }
+}
+
+function promoteCaroQueue(room) {
+  let promoted = null
+  while (room.players.size < 2 && room.queue.length > 0) {
+    const next = room.queue.shift()
+    if (!next) break
+    room.players.set(next.id, { ...next, ready: false, symbol: null })
+    if (!room.hostId) room.hostId = next.id
+    promoted = next
+  }
+  if (promoted) {
+    sendCaro(promoted.ws, { type: 'role_update', role: 'player', hostId: room.hostId })
+  }
+}
+
+function scheduleCaroReset(room) {
+  if (room.resetTimer) return
+  room.resetTimer = setTimeout(() => {
+    room.resetTimer = null
+    resetCaroRoom(room)
+    broadcastCaroRoom(room, { type: 'system', message: 'Ván mới đã sẵn sàng. Ấn sẵn sàng để chơi lại.' })
+    broadcastCaroRoom(room, buildCaroRoomState(room))
+  }, 4000)
 }
 
 function buildSnapshot(room) {
@@ -285,7 +419,7 @@ app.get('/health', (_, res) => {
 })
 
 const httpServer = createServer(app)
-const wss = new WebSocketServer({ server: httpServer, path: '/ws' })
+const wss = new WebSocketServer({ noServer: true })
 
 wss.on('connection', (ws) => {
   let room = null
@@ -413,6 +547,231 @@ wss.on('connection', (ws) => {
   })
 })
 
+const caroWss = new WebSocketServer({ noServer: true })
+
+httpServer.on('upgrade', (req, socket, head) => {
+  const url = req.url || ''
+  if (url.startsWith('/ws')) {
+    wss.handleUpgrade(req, socket, head, (client) => {
+      wss.emit('connection', client, req)
+    })
+    return
+  }
+  if (url.startsWith('/caro-ws')) {
+    caroWss.handleUpgrade(req, socket, head, (client) => {
+      caroWss.emit('connection', client, req)
+    })
+    return
+  }
+  socket.destroy()
+})
+
+caroWss.on('connection', (ws) => {
+  const clientId = `c${nextCaroClientId++}`
+  let room = null
+  let role = 'lobby'
+  let name = null
+
+  sendCaro(ws, { type: 'hello', size: CARO_SIZE })
+
+  const joinRoom = (roomId, playerName) => {
+    const rid = sanitizeRoomId(roomId)
+    const cleanedName = sanitizeName(playerName)
+    if (!rid) return sendCaro(ws, { type: 'error', message: 'Room id invalid' })
+    if (!cleanedName) return sendCaro(ws, { type: 'error', message: 'Name invalid' })
+    if (room) return
+
+    name = cleanedName
+    room = caroRooms.get(rid)
+    if (!room) {
+      room = {
+        id: rid,
+        createdAt: now(),
+        hostId: clientId,
+        players: new Map(),
+        queue: [],
+        board: createCaroBoard(),
+        current: 'X',
+        winner: null,
+        started: false,
+        lastMove: null,
+      }
+      caroRooms.set(rid, room)
+    }
+
+    if (!room.hostId) room.hostId = clientId
+
+    if (room.players.size < 2) {
+      room.players.set(clientId, { id: clientId, name: cleanedName, ws, ready: false, symbol: null })
+      role = 'player'
+    } else {
+      room.queue.push({ id: clientId, name: cleanedName, ws })
+      role = 'queue'
+    }
+
+    caroLobbyClients.delete(ws)
+    sendCaro(ws, { type: 'joined', roomId: room.id, playerId: clientId, role, hostId: room.hostId })
+    broadcastCaroRoom(room, { type: 'system', message: `${cleanedName} joined` })
+    broadcastCaroRoom(room, buildCaroRoomState(room))
+    broadcastCaroRooms()
+  }
+
+  const leaveRoom = (reason = null) => {
+    if (!room) return
+    const wasPlayer = room.players.has(clientId)
+    room.players.delete(clientId)
+    room.queue = room.queue.filter((q) => q.id !== clientId)
+    if (room.hostId === clientId) {
+      const nextHost = room.players.values().next().value
+      room.hostId = nextHost ? nextHost.id : null
+    }
+    if (wasPlayer) resetCaroRoom(room)
+    promoteCaroQueue(room)
+
+    if (room.players.size === 0 && room.queue.length === 0) {
+      caroRooms.delete(room.id)
+    } else {
+      broadcastCaroRoom(room, { type: 'system', message: `${name ?? 'Player'} left` })
+      broadcastCaroRoom(room, buildCaroRoomState(room))
+    }
+    broadcastCaroRooms()
+    room = null
+    role = 'lobby'
+    name = null
+    if (ws.readyState === ws.OPEN) {
+      caroLobbyClients.add(ws)
+      sendCaro(ws, buildCaroRoomsPayload())
+    }
+    if (reason) sendCaro(ws, { type: 'system', message: reason })
+  }
+
+  ws.on('message', (raw) => {
+    let msg = null
+    try {
+      msg = JSON.parse(raw.toString())
+    } catch {
+      sendCaro(ws, { type: 'error', message: 'Invalid JSON' })
+      return
+    }
+
+    if (msg.type === 'subscribe_rooms') {
+      caroLobbyClients.add(ws)
+      sendCaro(ws, buildCaroRoomsPayload())
+      return
+    }
+
+    if (msg.type === 'join') {
+      joinRoom(msg.roomId, msg.name)
+      return
+    }
+
+    if (msg.type === 'leave') {
+      leaveRoom()
+      return
+    }
+
+    if (!room) return
+
+    if (msg.type === 'ready') {
+      const me = room.players.get(clientId)
+      if (!me) return
+      me.ready = !me.ready
+      if (room.players.size === 2) {
+        const players = [...room.players.values()]
+        if (players.every((p) => p.ready)) {
+          resetCaroRoom(room)
+          const host = room.players.get(room.hostId)
+          const other = players.find((p) => p.id !== room.hostId)
+          if (host) host.symbol = 'X'
+          if (other) other.symbol = 'O'
+          room.started = true
+          broadcastCaroRoom(room, { type: 'system', message: 'Game started' })
+        }
+      }
+      broadcastCaroRoom(room, buildCaroRoomState(room))
+      return
+    }
+
+    if (msg.type === 'move') {
+      const me = room.players.get(clientId)
+      if (!me || !room.started || room.winner) return
+      if (me.symbol !== room.current) return
+      const row = Number(msg.row)
+      const col = Number(msg.col)
+      if (!Number.isInteger(row) || !Number.isInteger(col)) return
+      if (row < 0 || row >= CARO_SIZE || col < 0 || col >= CARO_SIZE) return
+      if (room.board[row][col] !== null) return
+      room.board[row][col] = me.symbol
+      room.lastMove = { row, col, by: me.id }
+      if (isCaroWinFromMove(room.board, row, col, me.symbol)) {
+        room.winner = me.symbol
+        room.started = false
+        broadcastCaroRoom(room, { type: 'system', message: `${me.name} won` })
+        scheduleCaroReset(room)
+      } else {
+        room.current = room.current === 'X' ? 'O' : 'X'
+      }
+      broadcastCaroRoom(room, buildCaroRoomState(room))
+      return
+    }
+
+    if (msg.type === 'chat') {
+      const cleaned = String(msg.message || '').trim().slice(0, 200)
+      if (!cleaned) return
+      const sender =
+        room.players.get(clientId)?.name ??
+        room.queue.find((q) => q.id === clientId)?.name ??
+        'Guest'
+      broadcastCaroRoom(room, {
+        type: 'chat',
+        id: `${clientId}-${Date.now()}`,
+        name: sender,
+        message: cleaned,
+        at: now(),
+      })
+      return
+    }
+
+    if (msg.type === 'kick') {
+      if (room.hostId !== clientId) return
+      const targetId = String(msg.targetId || '')
+      if (!targetId || targetId === clientId) return
+
+      if (room.players.has(targetId)) {
+        const target = room.players.get(targetId)
+        room.players.delete(targetId)
+        if (target) {
+          sendCaro(target.ws, { type: 'kicked', message: 'You were removed by host' })
+          target.ws.close()
+        }
+        resetCaroRoom(room)
+        promoteCaroQueue(room)
+      } else {
+        const idx = room.queue.findIndex((q) => q.id === targetId)
+        if (idx >= 0) {
+          const [target] = room.queue.splice(idx, 1)
+          if (target) {
+            sendCaro(target.ws, { type: 'kicked', message: 'You were removed by host' })
+            target.ws.close()
+          }
+        }
+      }
+
+      if (room.players.size === 0 && room.queue.length === 0) {
+        caroRooms.delete(room.id)
+      } else {
+        broadcastCaroRoom(room, buildCaroRoomState(room))
+      }
+      broadcastCaroRooms()
+    }
+  })
+
+  ws.on('close', () => {
+    caroLobbyClients.delete(ws)
+    leaveRoom()
+  })
+})
+
 setInterval(() => {
   for (const room of rooms.values()) simulateRoom(room, TICK_MS / 1000)
 }, TICK_MS)
@@ -420,4 +779,3 @@ setInterval(() => {
 httpServer.listen(PORT, () => {
   console.log(`Tank server listening on :${PORT}`)
 })
-

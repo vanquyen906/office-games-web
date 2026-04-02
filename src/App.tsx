@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { CaroGame } from './games/CaroGame'
+import { CaroOnlineGame } from './games/CaroOnlineGame'
 import { TicTacToeGame } from './games/TicTacToeGame'
 import { ShooterGame } from './games/ShooterGame'
 import { SnakeGame } from './games/SnakeGame'
@@ -80,6 +81,16 @@ function App() {
         'Chơi 2 người trên lưới ô vuông. Lần lượt đánh X/O; ai tạo được 5 quân liên tiếp (ngang/dọc/chéo) trước sẽ thắng.',
     },
     {
+      id: 'caro-online',
+      name: 'Caro Online (Phòng + chờ)',
+      players: '2+',
+      duration: '5–20 phút',
+      category: 'Strategy',
+      tags: ['caro', 'online', 'phòng', 'multiplayer'],
+      description:
+        'Tạo phòng theo tên, bạn bè vào qua link /caro-online/tenphong. Đủ 2 người sẽ hiện nút sẵn sàng, người đến sau xếp hàng chờ.',
+    },
+    {
       id: 'tic-tac-toe',
       name: 'Tic Tac Toe (3x3) chơi với máy',
       players: '1',
@@ -130,15 +141,27 @@ function App() {
 
   const gameRoutes: Partial<Record<(typeof games)[number]['id'], string>> = {
     caro: '/caro',
+    'caro-online': '/caro-online',
     'tic-tac-toe': '/tic-tac-toe',
     shooter: '/ban-sung',
     snake: '/ran-san-moi',
     'tank-online': '/ban-xe-tang',
   }
-  const routeToGame = Object.fromEntries(
-    Object.entries(gameRoutes).map(([id, route]) => [route, id]),
-  ) as Record<string, string>
-  const activeGameId = routeToGame[location.pathname] ?? null
+  const routeToGame = Object.fromEntries(Object.entries(gameRoutes).map(([id, route]) => [route, id])) as Record<
+    string,
+    string
+  >
+  let activeGameId = routeToGame[location.pathname] ?? null
+  let caroOnlineRoomId: string | null = null
+  if (!activeGameId && location.pathname.startsWith('/caro-online/')) {
+    activeGameId = 'caro-online'
+    const raw = location.pathname.replace('/caro-online/', '')
+    try {
+      caroOnlineRoomId = decodeURIComponent(raw)
+    } catch {
+      caroOnlineRoomId = raw
+    }
+  }
 
   const categories = ['Tất cả', ...new Set(games.map((g) => g.category))] as const
 
@@ -157,6 +180,14 @@ function App() {
     return (
       <div className="page">
         <CaroGame onBack={() => navigate('/')} />
+      </div>
+    )
+  }
+
+  if (activeGameId === 'caro-online') {
+    return (
+      <div className="page">
+        <CaroOnlineGame onBack={() => navigate('/')} initialRoomId={caroOnlineRoomId} />
       </div>
     )
   }

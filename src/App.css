@@ -651,6 +651,138 @@ select:focus {
   background: var(--social-bg);
 }
 
+.caroOnlinePage {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 18px 20px 28px;
+  box-sizing: border-box;
+}
+
+.caroOnlineMain {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.caroLobby {
+  display: grid;
+  gap: 12px;
+}
+
+.caroRoom {
+  display: grid;
+  gap: 12px;
+}
+
+.caroPanel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--bg) 88%, var(--code-bg));
+}
+
+.caroPanel h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.caroRooms {
+  display: grid;
+  gap: 8px;
+}
+
+.caroRoomCard {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--social-bg);
+}
+
+.caroRoomMeta {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.caroRoomHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.caroRoomInfo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.caroPlayer,
+.caroQueue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--social-bg);
+  margin-top: 6px;
+}
+
+.caroPlayer.isMe {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.caroShare {
+  margin: 6px 0 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.caroChat {
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.caroChat p {
+  margin: 0;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--social-bg);
+}
+
+.caroChatInput {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 980px) {
+  .caroOnlineMain {
+    grid-template-columns: 1fr;
+  }
+
+  .caroRoomInfo {
+    grid-template-columns: 1fr;
+  }
+}
+
 .cardTop {
   display: flex;
   gap: 12px;
